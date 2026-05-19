@@ -1,0 +1,15 @@
+node_modules/
+dist/
+
+.env
+config.dev.ts
+config.staging.ts
+config.production.ts
+
+playwright-report/
+test-results/
+/playwright/.cache/
+tests/data/.run-state.json
+
+*.log
+*.tsbuildinfo

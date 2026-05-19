@@ -1,0 +1,38 @@
+{
+  "name": "transcription-playwright",
+  "version": "1.0.0",
+  "description": "Playwright test automation for Solibra transcription frontend",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:ui": "playwright test --ui",
+    "test:full": "playwright test tests/specs --project=standalone",
+    "test:full:headed": "playwright test tests/specs --project=standalone --headed",
+    "test:tc01": "playwright test tests/specs/01-login.spec.ts --project=standalone",
+    "test:tc02": "playwright test tests/specs/02-createHierarchy.spec.ts --project=standalone",
+    "test:tc03": "playwright test tests/specs/03-uploadBatch.spec.ts --project=standalone",
+    "test:tc04": "playwright test tests/specs/04-transcribeBatch.spec.ts --project=standalone",
+    "test:tc05": "playwright test tests/specs/05-assignFile.spec.ts --project=standalone",
+    "test:tc06": "playwright test tests/specs/06-openAssignment.spec.ts --project=standalone",
+    "test:tc07": "playwright test tests/specs/07-editSegment.spec.ts --project=standalone",
+    "test:tc08": "playwright test tests/specs/08-splitSegment.spec.ts --project=standalone",
+    "test:tc09": "playwright test tests/specs/09-mergeSegment.spec.ts --project=standalone",
+    "test:tc10": "playwright test tests/specs/10-insertSegment.spec.ts --project=standalone",
+    "test:tc11": "playwright test tests/specs/11-deleteSegment.spec.ts --project=standalone",
+    "test:tc12": "playwright test tests/specs/12-updateMetadata.spec.ts --project=standalone",
+    "test:tc13": "playwright test tests/specs/13-submitReview.spec.ts --project=standalone",
+    "test:tc14": "playwright test tests/specs/14-managerApprove.spec.ts --project=standalone",
+    "test:tc15": "playwright test tests/specs/15-cleanup.spec.ts --project=standalone",
+    "codegen": "playwright codegen https://transcription-frontend-dev.vercel.app/login",
+    "report": "playwright show-report",
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@types/node": "^20.17.24",
+    "dotenv": "^16.4.7",
+    "typescript": "^5.8.2"
+  },
+  "packageManager": "pnpm@11.1.3+sha512.c85357fe17ca12dd23dd7071822666dfd7e3cb76fe214e3370b5ea2fb34f2a231185509b63e717f3cd0acb38dd3f8d82bcd5e8172400ae678b70ea4fbed0896d"
+}
