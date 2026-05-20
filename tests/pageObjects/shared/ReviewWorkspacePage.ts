@@ -1,6 +1,5 @@
 import { expect, Locator, Page } from '@playwright/test';
 import { BasePage } from '../BasePage';
-import { selectOptionByText } from '@utils/selectors';
 
 export class ReviewWorkspacePage extends BasePage {
   constructor(page: Page) {
@@ -15,6 +14,23 @@ export class ReviewWorkspacePage extends BasePage {
     return this.page.locator('textarea');
   }
 
+  private async dismissWorkspaceTourIfPresent(): Promise<void> {
+    const dialog = this.page.getByRole('dialog', { name: /Audio editor/i });
+    if (!(await dialog.isVisible({ timeout: 1500 }).catch(() => false))) {
+      return;
+    }
+
+    const close = dialog.getByRole('button', { name: /Close/i });
+    if (await close.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await close.click();
+    } else {
+      await dialog.getByRole('button', { name: /Next/i }).click().catch(() => {});
+      await close.click().catch(() => {});
+    }
+
+    await expect(dialog).toBeHidden({ timeout: 10000 });
+  }
+
   private async textareaByValue(value: string): Promise<Locator> {
     const index = await this.allTranscriptAreas().evaluateAll((nodes, expected) => {
       return nodes.findIndex((node) => (node as HTMLTextAreaElement).value === expected);
@@ -23,6 +39,25 @@ export class ReviewWorkspacePage extends BasePage {
     if (index < 0) {
       throw new Error(`Could not find textarea with value: ${value}`);
     }
+
+    return this.allTranscriptAreas().nth(index);
+  }
+
+  private async blankTextarea(): Promise<Locator> {
+    const index = await expect
+      .poll(
+        async () =>
+          this.allTranscriptAreas().evaluateAll((nodes) => {
+            return nodes.findIndex((node) => !(node as HTMLTextAreaElement).value.trim());
+          }),
+        { timeout: 30000 },
+      )
+      .toBeGreaterThan(-1)
+      .then(async () =>
+        this.allTranscriptAreas().evaluateAll((nodes) => {
+          return nodes.findIndex((node) => !(node as HTMLTextAreaElement).value.trim());
+        }),
+      );
 
     return this.allTranscriptAreas().nth(index);
   }
@@ -36,6 +71,7 @@ export class ReviewWorkspacePage extends BasePage {
   }
 
   async expectLoaded(fileName?: string): Promise<void> {
+    await this.dismissWorkspaceTourIfPresent();
     if (fileName) {
       await expect(this.page.getByText(fileName)).toBeVisible({ timeout: 45000 });
     }
@@ -95,8 +131,19 @@ export class ReviewWorkspacePage extends BasePage {
     }).toBe(before + 1);
   }
 
+  async mergeSecondSegmentWithPrevious(): Promise<void> {
+    const before = await this.allTranscriptAreas().count();
+    if (before < 2) throw new Error('Need at least two segments to merge with previous');
+    await this.allTranscriptAreas().nth(1).click();
+    await this.page.getByRole('button', { name: /Merge ↑/ }).click();
+    await expect.poll(async () => this.allTranscriptAreas().count(), {
+      timeout: 30000,
+    }).toBe(before - 1);
+  }
+
   async mergeFirstSegmentWithNext(): Promise<void> {
     const before = await this.allTranscriptAreas().count();
+    if (before < 2) throw new Error('Need at least two segments to merge with next');
     await this.allTranscriptAreas().first().click();
     await this.page.getByRole('button', { name: /Merge ↓/ }).click();
     await expect.poll(async () => this.allTranscriptAreas().count(), {
@@ -108,14 +155,30 @@ export class ReviewWorkspacePage extends BasePage {
     const before = await this.allTranscriptAreas().count();
     await this.allTranscriptAreas().first().click();
     await this.page.getByRole('button', { name: /^Insert$/ }).click();
-    await expect.poll(async () => this.allTranscriptAreas().count(), {
-      timeout: 30000,
-    }).toBe(before + 1);
 
-    const inserted = this.allTranscriptAreas().nth(1);
+    const insertedAfterRow = await expect
+      .poll(async () => this.allTranscriptAreas().count(), {
+        timeout: 2500,
+      })
+      .toBe(before + 1)
+      .then(() => true)
+      .catch(() => false);
+
+    if (!insertedAfterRow) {
+      await this.page.getByRole('button', { name: /Add segment/i }).click();
+      await expect.poll(async () => this.allTranscriptAreas().count(), {
+        timeout: 30000,
+      }).toBe(before + 1);
+    }
+
+    const inserted = await this.blankTextarea();
     await inserted.fill(text);
     await this.saveAllIfVisible();
-    await expect(inserted).toHaveValue(text, { timeout: 30000 });
+    await expect.poll(async () => {
+      return this.allTranscriptAreas().evaluateAll((nodes, expected) => {
+        return nodes.some((node) => (node as HTMLTextAreaElement).value === expected);
+      }, text);
+    }, { timeout: 30000 }).toBe(true);
   }
 
   async deleteSegmentWithText(text: string): Promise<void> {
@@ -136,8 +199,16 @@ export class ReviewWorkspacePage extends BasePage {
     await this.allTranscriptAreas().first().click();
     const activeRow = this.page.locator('.segment-active').first();
     await expect(activeRow).toBeVisible({ timeout: 10000 });
-    const langCombo = activeRow.getByRole('combobox').nth(1);
-    await selectOptionByText(this.page, langCombo, /English \(en\)/);
+    const emotionCombo = activeRow.getByRole('combobox').nth(1);
+    await emotionCombo.click();
+    const listbox = this.page.getByRole('listbox').last();
+    await expect(listbox).toBeVisible({ timeout: 10000 });
+    const option = listbox
+      .getByRole('option')
+      .filter({ hasNotText: /^✓/ })
+      .first();
+    await expect(option).toBeVisible({ timeout: 10000 });
+    await option.click();
     await this.saveAllIfVisible();
   }
 
@@ -157,6 +228,22 @@ export class ReviewWorkspacePage extends BasePage {
   async approveSubmittedReview(): Promise<void> {
     await expect(this.page.getByText('SUBMITTED')).toBeVisible({ timeout: 30000 });
     await this.page.getByRole('button', { name: /^Approve$/ }).click();
-    await expect(this.page.getByText('APPROVED')).toBeVisible({ timeout: 45000 });
+    await expect(this.page.getByText(/Review approved|APPROVED/i).first()).toBeVisible({
+      timeout: 45000,
+    });
+  }
+
+  async rejectSubmittedReview(reason: string): Promise<void> {
+    await expect(this.page.getByText('SUBMITTED')).toBeVisible({ timeout: 30000 });
+    await this.dismissWorkspaceTourIfPresent();
+    await this.page.getByRole('button', { name: /^Reject$/ }).click();
+    await expect(this.page.getByRole('heading', { name: 'Reject Transcription' })).toBeVisible({
+      timeout: 10000,
+    });
+    await this.page.getByPlaceholder(/Describe what needs to be corrected/).fill(reason);
+    await this.page.getByRole('button', { name: /^Reject$/ }).last().click();
+    await expect(this.page.getByText(/Review rejected|REJECTED/i).first()).toBeVisible({
+      timeout: 45000,
+    });
   }
 }

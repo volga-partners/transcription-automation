@@ -16,7 +16,7 @@ test('@TC03 Upload audio batch', async ({ page }) => {
   const uploadPage = new UploadPage(page);
   await uploadPage.navigate();
   await stepPause(page, 'Upload page opened');
-  const result = await uploadPage.uploadAudioBatch({
+  const primary = await uploadPage.uploadAudioBatch({
     customerName: run.clientName,
     projectName: run.projectName,
     phaseName: run.phaseName,
@@ -24,6 +24,21 @@ test('@TC03 Upload audio batch', async ({ page }) => {
     audioPath: getFirstAudioFile(),
   });
 
-  updateRunState({ batchId: result.batchId, fileName: result.fileName });
+  updateRunState({ batchId: primary.batchId, fileName: primary.fileName });
   await stepPause(page, `Uploaded batch: ${run.batchName}`, 1500);
+
+  await uploadPage.navigate();
+  const rejectCandidate = await uploadPage.uploadAudioBatch({
+    customerName: run.clientName,
+    projectName: run.projectName,
+    phaseName: run.phaseName,
+    batchName: run.rejectBatchName,
+    audioPath: getFirstAudioFile(),
+  });
+
+  updateRunState({
+    rejectBatchId: rejectCandidate.batchId,
+    rejectFileName: rejectCandidate.fileName,
+  });
+  await stepPause(page, `Uploaded reject-decision batch: ${run.rejectBatchName}`, 1500);
 });

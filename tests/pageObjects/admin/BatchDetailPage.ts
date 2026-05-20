@@ -6,6 +6,23 @@ export class BatchDetailPage extends BasePage {
     super(page);
   }
 
+  private async dismissBatchTourIfPresent(): Promise<void> {
+    const dialog = this.page.getByRole('dialog', { name: /Transcription Complete!/i });
+    if (!(await dialog.isVisible({ timeout: 1500 }).catch(() => false))) {
+      return;
+    }
+
+    const close = dialog.getByRole('button', { name: /Close/i });
+    if (await close.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await close.click();
+    } else {
+      await dialog.getByRole('button', { name: /Next/i }).click().catch(() => {});
+      await close.click().catch(() => {});
+    }
+
+    await expect(dialog).toBeHidden({ timeout: 10000 });
+  }
+
   async expectLoaded(batchName: string): Promise<void> {
     await expect(this.page.getByRole('heading', { name: batchName })).toBeVisible({
       timeout: 30000,
@@ -47,7 +64,15 @@ export class BatchDetailPage extends BasePage {
     return fileId;
   }
 
+  async transcribeAndReturnFirstFileId(batchName: string, maxMinutes = 18): Promise<string> {
+    await this.expectLoaded(batchName);
+    await this.startTranscriptionIfReady();
+    await this.waitForTranscriptionCompleted(maxMinutes);
+    return this.getFirstReviewFileId();
+  }
+
   async assignFirstCompletedFileTo(email: string): Promise<void> {
+    await this.dismissBatchTourIfPresent();
     const selectAll = this.page.getByRole('button', { name: 'Select All' });
     await expect(selectAll).toBeVisible({ timeout: 30000 });
     await selectAll.click();
@@ -56,8 +81,9 @@ export class BatchDetailPage extends BasePage {
     await expect(this.page.getByRole('heading', { name: 'Assign QA Specialist' })).toBeVisible({
       timeout: 20000,
     });
+    await this.dismissBatchTourIfPresent();
     await this.page.getByPlaceholder('Search by name or email...').fill(email);
-    await this.page.locator('label').filter({ hasText: email }).first().click();
+    await this.page.getByRole('radio', { name: new RegExp(email, 'i') }).check();
     await this.page.getByRole('button', { name: /^Assign$/ }).click();
     await expect(this.page.getByText(/assigned successfully/i)).toBeVisible({
       timeout: 30000,

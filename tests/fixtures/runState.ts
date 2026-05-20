@@ -7,9 +7,13 @@ export type RunState = ReturnType<typeof buildRunData> & {
   projectId?: string;
   phaseId?: string;
   batchId?: string;
+  rejectBatchId?: string;
   fileId?: string;
+  rejectFileId?: string;
   fileName?: string;
+  rejectFileName?: string;
   editedText?: string;
+  rejectEditedText?: string;
 };
 
 const statePath = path.resolve(__dirname, '../data/.run-state.json');

@@ -9,6 +9,7 @@ test('@TC04 Start transcription and poll', async ({ page }) => {
   test.setTimeout(20 * 60 * 1000);
   const run = getRunState();
   const batchId = requireState(run, 'batchId');
+  const rejectBatchId = requireState(run, 'rejectBatchId');
 
   const loginPage = new LoginPage(page);
   await loginPage.loginAs(Accounts.admin.email, Accounts.admin.password);
@@ -16,11 +17,14 @@ test('@TC04 Start transcription and poll', async ({ page }) => {
   await stepPause(page, 'Batch detail opened');
 
   const batchPage = new BatchDetailPage(page);
-  await batchPage.expectLoaded(run.batchName);
-  await batchPage.startTranscriptionIfReady();
+  await batchPage.transcribeAndReturnFirstFileId(run.batchName);
   await stepPause(page, 'Transcription started or already running', 1500);
-  await batchPage.waitForTranscriptionCompleted(18);
   const fileId = await batchPage.getFirstReviewFileId();
   updateRunState({ fileId });
-  await stepPause(page, 'Transcription completed', 1500);
+  await stepPause(page, 'Primary transcription completed', 1500);
+
+  await page.goto(`/batches/${rejectBatchId}`, { waitUntil: 'domcontentloaded' });
+  const rejectFileId = await batchPage.transcribeAndReturnFirstFileId(run.rejectBatchName);
+  updateRunState({ rejectFileId });
+  await stepPause(page, 'Reject-candidate transcription completed', 1500);
 });

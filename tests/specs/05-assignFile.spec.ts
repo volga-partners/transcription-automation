@@ -8,6 +8,7 @@ import { stepPause } from '../utils/stepPause';
 test('@TC05 Assign completed file', async ({ page }) => {
   const run = getRunState();
   const batchId = requireState(run, 'batchId');
+  const rejectBatchId = requireState(run, 'rejectBatchId');
 
   const loginPage = new LoginPage(page);
   await loginPage.loginAs(Accounts.admin.email, Accounts.admin.password);
@@ -18,4 +19,9 @@ test('@TC05 Assign completed file', async ({ page }) => {
   await batchPage.expectLoaded(run.batchName);
   await batchPage.assignFirstCompletedFileTo(Accounts.qaSpecialist.email);
   await stepPause(page, `Assigned file to ${Accounts.qaSpecialist.email}`, 1500);
+
+  await page.goto(`/batches/${rejectBatchId}`, { waitUntil: 'domcontentloaded' });
+  await batchPage.expectLoaded(run.rejectBatchName);
+  await batchPage.assignFirstCompletedFileTo(Accounts.qaSpecialist.email);
+  await stepPause(page, `Assigned reject-decision file to ${Accounts.qaSpecialist.email}`, 1500);
 });

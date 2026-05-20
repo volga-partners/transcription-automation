@@ -36,6 +36,9 @@ export default defineConfig({
       envConfig.baseURL ||
       'https://transcription-frontend-dev.vercel.app',
     headless: process.env.HEADLESS !== 'false',
+    launchOptions: {
+      slowMo: Number(process.env.SLOW_MO_MS || '0'),
+    },
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     trace: 'on-first-retry',

@@ -15,8 +15,11 @@ export function buildRunData() {
     projectName: `AUTO Project ${runId}`,
     phaseName: `AUTO Phase ${runId}`,
     batchName: `AUTO Batch ${runId}`,
+    rejectBatchName: `AUTO Reject Batch ${runId}`,
     insertedSegmentText: `AUTO INSERTED SEGMENT ${runId}`,
     editedSegmentSuffix: ` AUTO EDIT ${runId}`,
+    rejectEditedSegmentSuffix: ` AUTO REJECT FLOW EDIT ${runId}`,
+    rejectionReason: `Automation rejection reason ${runId}`,
   };
 }
 
