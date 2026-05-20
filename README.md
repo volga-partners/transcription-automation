@@ -39,7 +39,7 @@ corepack pnpm run test:full:headed
 corepack pnpm run report
 ```
 
-The deep flow is split into 15 numbered spec files under `tests/specs`.
+The deep flow is split into 17 numbered spec files under `tests/specs`.
 Later cases depend on data created in earlier cases, so run the full suite from `01` onward.
 
 ## Headed Mode Pauses
