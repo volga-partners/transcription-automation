@@ -24,7 +24,7 @@ export class UploadPage extends BasePage {
     projectName: string;
     phaseName: string;
     batchName: string;
-    audioPath: string | string[];
+    audioPath: string;
     language?: string | RegExp;
   }): Promise<{ batchId: string; fileName: string }> {
     await selectOptionByText(this.page, comboboxForHiddenSelect(this.page, 'upload-customer'), data.customerName);
@@ -39,11 +39,8 @@ export class UploadPage extends BasePage {
       data.language || /English \(en\)/,
     );
 
-    const paths = Array.isArray(data.audioPath) ? data.audioPath : [data.audioPath];
-    await this.page.locator('input[type="file"]').setInputFiles(paths);
-    for (const p of paths) {
-      await expect(this.page.getByText(path.basename(p))).toBeVisible({ timeout: 10000 });
-    }
+    await this.page.locator('input[type="file"]').setInputFiles(data.audioPath);
+    await expect(this.page.getByText(path.basename(data.audioPath))).toBeVisible({ timeout: 10000 });
     await this.page.getByRole('button', { name: /^Upload Files$/ }).click();
 
     await waitForToast(this.page, 'Files uploaded successfully');
@@ -52,6 +49,6 @@ export class UploadPage extends BasePage {
     const batchId = this.page.url().match(/\/batches\/([^/?#]+)/)?.[1];
     if (!batchId) throw new Error('Could not parse batch id from URL');
 
-    return { batchId, fileName: path.basename(paths[0]) };
+    return { batchId, fileName: path.basename(data.audioPath) };
   }
 }

@@ -36,17 +36,3 @@ export function getFirstAudioFile(): string {
 
   return path.join(audioDir, files[0]);
 }
-
-export function getAudioFiles(count: number): string[] {
-  const audioDir = path.resolve(__dirname, './audio');
-  const files = fs
-    .readdirSync(audioDir)
-    .filter((file) => AUDIO_EXTENSIONS.has(path.extname(file).toLowerCase()))
-    .sort();
-
-  if (files.length < count) {
-    throw new Error(`Need ${count} audio files but only found ${files.length} in ${audioDir}`);
-  }
-
-  return files.slice(0, count).map((f) => path.join(audioDir, f));
-}
