@@ -20,7 +20,7 @@ test('@TC16 QA Manager review decision - reject', async ({ page }) => {
   await workspace.rejectSubmittedReview(run.rejectionReason);
   await stepPause(page, 'Review rejected', 1500);
 
-  await loginPage.loginAs(Accounts.qaSpecialist.email, Accounts.qaSpecialist.password);
+  await loginPage.switchUser(Accounts.qaSpecialist.email, Accounts.qaSpecialist.password);
 
   const assignmentsPage = new MyAssignmentsPage(page);
   await assignmentsPage.navigate();

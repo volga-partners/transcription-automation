@@ -98,7 +98,12 @@ export class ReviewWorkspacePage extends BasePage {
 
   async editFirstSegment(suffix: string): Promise<string> {
     const first = this.allTranscriptAreas().first();
+    await expect(first).toBeVisible({ timeout: 30000 });
     const current = await first.inputValue();
+    const isReadonly = await first.evaluate((node) => (node as HTMLTextAreaElement).readOnly);
+    if (isReadonly || current.includes(suffix)) {
+      return current;
+    }
     const next = `${current}${suffix}`;
     await first.fill(next);
     await this.saveAllIfVisible();
@@ -212,21 +217,53 @@ export class ReviewWorkspacePage extends BasePage {
     await this.saveAllIfVisible();
   }
 
-  /** Status pill in the review workspace header (avoids nav tabs / toasts). */
+  private isOnReviewWorkspace(): boolean {
+    return /^\/review\/[^/]+$/.test(new URL(this.page.url()).pathname);
+  }
+
+  /** Status pill — first direct span in the workspace header actions row. */
   private reviewStatusBadge(status: string): Locator {
     return this.page
       .locator('.review-workspace-header__actions > span')
-      .filter({ hasText: new RegExp(`^${status}$`) });
+      .filter({ hasText: new RegExp(`^${status}$`) })
+      .first();
   }
 
-  private async hasReviewStatus(status: string): Promise<boolean> {
+  async hasReviewStatus(status: string): Promise<boolean> {
+    if (!this.isOnReviewWorkspace()) {
+      return false;
+    }
     return this.reviewStatusBadge(status).isVisible({ timeout: 3000 }).catch(() => false);
   }
 
-  private async expectReviewStatus(status: string): Promise<void> {
-    await expect(this.reviewStatusBadge(status)).toBeVisible({
+  /** Specialist file already submitted (header badge or read-only workspace). */
+  async isSubmitted(): Promise<boolean> {
+    if (await this.hasReviewStatus('SUBMITTED')) {
+      return true;
+    }
+    const first = this.allTranscriptAreas().first();
+    return first
+      .evaluate((node) => (node as HTMLTextAreaElement).readOnly)
+      .catch(() => false);
+  }
+
+  private async expectReadyForManagerDecision(): Promise<void> {
+    if (await this.hasReviewStatus('SUBMITTED')) {
+      return;
+    }
+    await expect(this.page.getByRole('button', { name: /^Approve$/ })).toBeVisible({
       timeout: 30000,
     });
+  }
+
+  /**
+   * Successful submit/approve/reject always navigates away from `/review/[fileId]`.
+   */
+  private async waitForLeftReviewWorkspace(): Promise<void> {
+    await this.page.waitForURL(
+      (url) => !/^\/review\/[^/]+$/.test(url.pathname),
+      { timeout: 45000, waitUntil: 'domcontentloaded' },
+    );
   }
 
   /**
@@ -237,7 +274,7 @@ export class ReviewWorkspacePage extends BasePage {
   private async ensureSubmitButtonVisible(): Promise<void> {
     await this.dismissWorkspaceTourIfPresent();
 
-    if (await this.hasReviewStatus('SUBMITTED')) {
+    if (await this.isSubmitted()) {
       return;
     }
 
@@ -255,7 +292,7 @@ export class ReviewWorkspacePage extends BasePage {
   }
 
   async submitReview(): Promise<void> {
-    if (await this.hasReviewStatus('SUBMITTED')) {
+    if (await this.isSubmitted()) {
       return;
     }
 
@@ -267,7 +304,7 @@ export class ReviewWorkspacePage extends BasePage {
     const confirm = this.page.getByRole('button', { name: 'Confirm Submit' });
     await expect(confirm).toBeEnabled({ timeout: 10000 });
     await confirm.click();
-    await this.expectReviewStatus('SUBMITTED');
+    await this.waitForLeftReviewWorkspace();
   }
 
   async approveSubmittedReview(): Promise<void> {
@@ -275,11 +312,9 @@ export class ReviewWorkspacePage extends BasePage {
       return;
     }
 
-    await this.expectReviewStatus('SUBMITTED');
+    await this.expectReadyForManagerDecision();
     await this.page.getByRole('button', { name: /^Approve$/ }).click();
-    await expect(this.reviewStatusBadge('APPROVED')).toBeVisible({
-      timeout: 45000,
-    });
+    await this.waitForLeftReviewWorkspace();
   }
 
   async rejectSubmittedReview(reason: string): Promise<void> {
@@ -287,7 +322,7 @@ export class ReviewWorkspacePage extends BasePage {
       return;
     }
 
-    await this.expectReviewStatus('SUBMITTED');
+    await this.expectReadyForManagerDecision();
     await this.dismissWorkspaceTourIfPresent();
     await this.page.getByRole('button', { name: /^Reject$/ }).click();
     await expect(this.page.getByRole('heading', { name: 'Reject Transcription' })).toBeVisible({
@@ -295,8 +330,6 @@ export class ReviewWorkspacePage extends BasePage {
     });
     await this.page.getByPlaceholder(/Describe what needs to be corrected/).fill(reason);
     await this.page.getByRole('button', { name: /^Reject$/ }).last().click();
-    await expect(this.reviewStatusBadge('REJECTED')).toBeVisible({
-      timeout: 45000,
-    });
+    await this.waitForLeftReviewWorkspace();
   }
 }

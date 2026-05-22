@@ -41,16 +41,16 @@ export class LoginPage extends BasePage {
     });
     if (await switchAccountButton.isVisible({ timeout: 5000 }).catch(() => false)) {
       await switchAccountButton.click();
-      await expect(this.emailInput).toBeVisible({ timeout: 30000 });
+      await this.page.waitForLoadState('domcontentloaded');
+    }
+
+    if (await this.emailInput.isVisible({ timeout: 5000 }).catch(() => false)) {
       return;
     }
 
-    if (await this.emailInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-      return;
-    }
-
-    // Rare fallback when /login redirects before the form renders.
-    await this.navigate();
+    // Review workspace / dashboard may keep the session without the login form.
+    await this.page.context().clearCookies();
+    await this.goto('/login');
     await expect(this.emailInput).toBeVisible({ timeout: 30000 });
   }
 
@@ -58,6 +58,11 @@ export class LoginPage extends BasePage {
     await this.ensureLoginFormReady();
     await this.login(email, password);
     await this.expectLoginSuccess();
+  }
+
+  /** Sign out any current user and sign in as another (same browser context). */
+  async switchUser(email: string, password: string): Promise<void> {
+    await this.loginAs(email, password);
   }
 
   async expectSignedIn(): Promise<void> {

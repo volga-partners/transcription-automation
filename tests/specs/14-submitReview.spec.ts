@@ -22,8 +22,10 @@ test('@TC14 Submit reviewed file', async ({ page }) => {
 
   await page.goto(`/review/${rejectFileId}`, { waitUntil: 'domcontentloaded' });
   await workspace.expectLoaded(run.rejectFileName);
-  const rejectEditedText = await workspace.editFirstSegment(run.rejectEditedSegmentSuffix);
-  updateRunState({ rejectEditedText });
+  if (!(await workspace.isSubmitted())) {
+    const rejectEditedText = await workspace.editFirstSegment(run.rejectEditedSegmentSuffix);
+    updateRunState({ rejectEditedText });
+  }
   await workspace.submitReview();
   await stepPause(page, 'Reject-candidate review submitted', 1500);
 });
