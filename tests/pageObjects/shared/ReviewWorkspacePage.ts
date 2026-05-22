@@ -212,7 +212,34 @@ export class ReviewWorkspacePage extends BasePage {
     await this.saveAllIfVisible();
   }
 
+  /**
+   * Submit is hidden for ASSIGNED files until there are unsaved edits or the
+   * file moves to IN_PROGRESS (activity timer). Playwright `fill()` does not
+   * fire React onChange, so prior saved edits leave the button unavailable.
+   */
+  private async ensureSubmitButtonVisible(): Promise<void> {
+    await this.dismissWorkspaceTourIfPresent();
+    const submit = this.page.getByRole('button', { name: /^Submit$/ });
+    if (await submit.isVisible({ timeout: 2000 }).catch(() => false)) {
+      return;
+    }
+
+    const first = this.allTranscriptAreas().first();
+    await first.click();
+    await first.press('End');
+    await first.pressSequentially(' ', { delay: 15 });
+
+    await expect(submit).toBeVisible({ timeout: 30000 });
+  }
+
+  private async expectReviewStatus(status: string): Promise<void> {
+    await expect(this.page.getByText(status, { exact: true })).toBeVisible({
+      timeout: 30000,
+    });
+  }
+
   async submitReview(): Promise<void> {
+    await this.ensureSubmitButtonVisible();
     await this.page.getByRole('button', { name: /^Submit$/ }).click();
     await expect(this.page.getByRole('heading', { name: 'Submit Review' })).toBeVisible({
       timeout: 10000,
@@ -226,7 +253,7 @@ export class ReviewWorkspacePage extends BasePage {
   }
 
   async approveSubmittedReview(): Promise<void> {
-    await expect(this.page.getByText('SUBMITTED')).toBeVisible({ timeout: 30000 });
+    await this.expectReviewStatus('SUBMITTED');
     await this.page.getByRole('button', { name: /^Approve$/ }).click();
     await expect(this.page.getByText(/Review approved|APPROVED/i).first()).toBeVisible({
       timeout: 45000,
@@ -234,7 +261,7 @@ export class ReviewWorkspacePage extends BasePage {
   }
 
   async rejectSubmittedReview(reason: string): Promise<void> {
-    await expect(this.page.getByText('SUBMITTED')).toBeVisible({ timeout: 30000 });
+    await this.expectReviewStatus('SUBMITTED');
     await this.dismissWorkspaceTourIfPresent();
     await this.page.getByRole('button', { name: /^Reject$/ }).click();
     await expect(this.page.getByRole('heading', { name: 'Reject Transcription' })).toBeVisible({

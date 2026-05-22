@@ -8,6 +8,7 @@
     "test:debug": "playwright test --debug",
     "test:ui": "playwright test --ui",
     "test:full": "playwright test tests/specs --project=standalone",
+    "test:cleanup": "playwright test tests/specs/17-cleanup.spec.ts --project=standalone",
     "test:full:headed": "set SLOW_MO_MS=350&& set STEP_PAUSE_MS=1500&& playwright test tests/specs --project=standalone --headed",
     "test:dev:full": "set TEST_ENV=dev&& playwright test tests/specs --project=standalone",
     "test:dev:full:headed": "set TEST_ENV=dev&& set SLOW_MO_MS=350&& set STEP_PAUSE_MS=1500&& playwright test tests/specs --project=standalone --headed",
