@@ -2,6 +2,7 @@ node_modules/
 dist/
 
 .env
+config.dev.ts
 config.staging.ts
 config.production.ts
 
