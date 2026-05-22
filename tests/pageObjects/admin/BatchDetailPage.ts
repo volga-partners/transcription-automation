@@ -42,8 +42,8 @@ export class BatchDetailPage extends BasePage {
   async waitForTranscriptionCompleted(maxMinutes = 15): Promise<void> {
     const deadline = Date.now() + maxMinutes * 60 * 1000;
     while (Date.now() < deadline) {
-      const completed = await this.page.getByText('COMPLETED').count();
-      const failed = await this.page.getByText('FAILED').count();
+      const completed = await this.page.locator('tbody').getByText('COMPLETED', { exact: true }).count();
+      const failed = await this.page.locator('tbody').getByText('FAILED', { exact: true }).count();
       if (completed > 0) return;
       if (failed > 0) {
         throw new Error('Transcription reached FAILED status');
