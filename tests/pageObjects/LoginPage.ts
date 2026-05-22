@@ -18,6 +18,7 @@ export class LoginPage extends BasePage {
   }
 
   async login(email: string, password: string): Promise<void> {
+    await expect(this.emailInput).toBeVisible({ timeout: 30000 });
     await this.emailInput.fill(email);
     await this.passwordInput.fill(password);
     await this.signInButton.click();
@@ -31,8 +32,30 @@ export class LoginPage extends BasePage {
     await this.page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
   }
 
-  async loginAs(email: string, password: string): Promise<void> {
+  /** Clears an existing session so credentials can be entered on /login. */
+  private async ensureLoginFormReady(): Promise<void> {
     await this.navigate();
+
+    const switchAccountButton = this.page.getByRole('button', {
+      name: /Sign out.*use another account/i,
+    });
+    if (await switchAccountButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await switchAccountButton.click();
+      await expect(this.emailInput).toBeVisible({ timeout: 30000 });
+      return;
+    }
+
+    if (await this.emailInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+      return;
+    }
+
+    // Rare fallback when /login redirects before the form renders.
+    await this.navigate();
+    await expect(this.emailInput).toBeVisible({ timeout: 30000 });
+  }
+
+  async loginAs(email: string, password: string): Promise<void> {
+    await this.ensureLoginFormReady();
     await this.login(email, password);
     await this.expectLoginSuccess();
   }

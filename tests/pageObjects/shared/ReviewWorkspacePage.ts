@@ -261,6 +261,14 @@ export class ReviewWorkspacePage extends BasePage {
   }
 
   async rejectSubmittedReview(reason: string): Promise<void> {
+    const alreadyRejected = await this.page
+      .getByText('REJECTED', { exact: true })
+      .isVisible({ timeout: 3000 })
+      .catch(() => false);
+    if (alreadyRejected) {
+      return;
+    }
+
     await this.expectReviewStatus('SUBMITTED');
     await this.dismissWorkspaceTourIfPresent();
     await this.page.getByRole('button', { name: /^Reject$/ }).click();
