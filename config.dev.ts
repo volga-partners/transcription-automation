@@ -4,16 +4,16 @@ const config: TestConfig = {
   baseURL: 'https://transcription-frontend-dev.vercel.app',
   accounts: {
     admin: {
-      email: 'admin@gmail.com',
-      password: 'Admin123!',
+      email: '',
+      password: '',
     },
     qaSpecialist: {
-      email: 'qaspecialist@test.com',
-      password: 'Test1234!',
+      email: '',
+      password: '',
     },
     qaManager: {
-      email: 'qamanager@test.com',
-      password: 'Test1234!',
+      email: '',
+      password: '',
     },
   },
 };
